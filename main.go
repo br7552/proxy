@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -53,7 +54,7 @@ func main() {
 		}
 
 		if resp, ok := cache.get(key); ok {
-			resp.Write(w)
+			writeResponse(w, resp)
 			return
 		}
 
@@ -77,8 +78,19 @@ func main() {
 			cache.insert(key, resp)
 		}
 
-		resp.Write(w)
+		writeResponse(w, resp)
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func writeResponse(w http.ResponseWriter, resp *http.Response) {
+	defer resp.Body.Close()
+
+	for k, v := range resp.Header {
+		w.Header()[k] = v
+	}
+	w.WriteHeader(resp.StatusCode)
+
+	io.Copy(w, resp.Body)
 }
