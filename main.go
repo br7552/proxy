@@ -41,22 +41,20 @@ func main() {
 			return
 		}
 
-		if resp, ok := cache.Get(req); ok {
-			writeResponse(w, resp)
-			return
-		}
+		resp, ok := cache.Get(req)
+		if !ok {
+			resp, err = client.Do(req)
+			if err != nil {
+				log.Printf("proxy:%v\n", err)
+				http.Error(w,
+					http.StatusText(http.StatusInternalServerError),
+					http.StatusInternalServerError)
+				return
+			}
 
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Printf("proxy:%v\n", err)
-			http.Error(w,
-				http.StatusText(http.StatusInternalServerError),
-				http.StatusInternalServerError)
-			return
-		}
-
-		if r.Method == http.MethodGet || r.Method == http.MethodHead {
-			cache.Set(req, resp)
+			if r.Method == http.MethodGet || r.Method == http.MethodHead {
+				cache.Set(req, resp)
+			}
 		}
 
 		writeResponse(w, resp)
