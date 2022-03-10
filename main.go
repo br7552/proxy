@@ -11,7 +11,7 @@ var client http.Client
 
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		url := "http://" + r.Host
+		url := "http://" + r.Host + r.URL.Path
 		resp, err := client.Get(url)
 		if err != nil {
 			fmt.Fprintf(w, "proxy:%v\n", err)
