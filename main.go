@@ -12,7 +12,15 @@ var client http.Client
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		url := "http://" + r.Host + r.URL.Path
-		resp, err := client.Get(url)
+		req, err := http.NewRequest(r.Method, url, r.Body)
+		if err != nil {
+			fmt.Fprintf(w, "proxy:%v\n", err)
+			c := http.StatusInternalServerError
+			http.Error(w, http.StatusText(c), c)
+			return
+		}
+
+		resp, err := client.Do(req)
 		if err != nil {
 			fmt.Fprintf(w, "proxy:%v\n", err)
 			c := http.StatusInternalServerError
@@ -33,7 +41,6 @@ func main() {
 			w.Header()[k] = v
 		}
 		w.WriteHeader(resp.StatusCode)
-
 		w.Write(body)
 	})
 
