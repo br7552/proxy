@@ -15,6 +15,8 @@ func main() {
 		resp, err := client.Get(url)
 		if err != nil {
 			fmt.Fprintf(w, "proxy:%v\n", err)
+			c := http.StatusInternalServerError
+			http.Error(w, http.StatusText(c), c)
 			return
 		}
 
@@ -22,10 +24,17 @@ func main() {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			fmt.Fprintf(w, "proxy:%v\n", err)
+			c := http.StatusInternalServerError
+			http.Error(w, http.StatusText(c), c)
 			return
 		}
 
-		fmt.Fprintf(w, "%s\n", body)
+		for k, v := range resp.Header {
+			w.Header()[k] = v
+		}
+		w.WriteHeader(resp.StatusCode)
+
+		w.Write(body)
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
