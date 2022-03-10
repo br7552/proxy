@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sync"
 )
 
 type cacheKey struct {
@@ -11,7 +12,30 @@ type cacheKey struct {
 	method string
 }
 
-var cache = make(map[cacheKey]*http.Response)
+type responseCache struct {
+	responses map[cacheKey]*http.Response
+	mu        sync.Mutex
+}
+
+func (rc *responseCache) get(key cacheKey) (*http.Response, bool) {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+
+	resp, ok := rc.responses[key]
+	return resp, ok
+}
+
+func (rc *responseCache) insert(key cacheKey, resp *http.Response) {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+
+	rc.responses[key] = resp
+}
+
+var cache = responseCache{
+	responses: make(map[cacheKey]*http.Response),
+}
+
 var client http.Client
 
 func main() {
@@ -28,7 +52,7 @@ func main() {
 			method: r.Method,
 		}
 
-		if resp, ok := cache[key]; ok {
+		if resp, ok := cache.get(key); ok {
 			resp.Write(w)
 			return
 		}
@@ -50,7 +74,7 @@ func main() {
 		}
 
 		if r.Method == http.MethodGet || r.Method == http.MethodHead {
-			cache[key] = resp
+			cache.insert(key, resp)
 		}
 
 		resp.Write(w)
