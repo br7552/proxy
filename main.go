@@ -49,7 +49,7 @@ func main() {
 			return
 		}
 
-		if r.Method == http.MethodGet || r.Method == http.MethodPost {
+		if r.Method == http.MethodGet || r.Method == http.MethodHead {
 			cache[key] = resp
 		}
 
