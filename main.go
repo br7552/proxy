@@ -11,17 +11,17 @@ var client http.Client
 
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		url := "http://" + r.URL.Path[1:]
+		url := "http://" + r.Host
 		resp, err := client.Get(url)
 		if err != nil {
-			fmt.Fprintf(w, "%v\n", err)
+			fmt.Fprintf(w, "proxy:%v\n", err)
 			return
 		}
 
 		defer resp.Body.Close()
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			fmt.Fprintf(w, "%v\n", err)
+			fmt.Fprintf(w, "proxy:%v\n", err)
 			return
 		}
 
