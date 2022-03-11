@@ -8,6 +8,14 @@ import (
 	"strings"
 )
 
+/* TODO:
+- return bad request response if addr host is proxy server
+- consider forwarding request headers and handling cache control
+	in a different way
+- consider caching original response headers and including them
+	in proxy server response
+*/
+
 func (p *proxy) handler(w http.ResponseWriter, r *http.Request) {
 	var addr string
 	switch {
@@ -22,8 +30,6 @@ func (p *proxy) handler(w http.ResponseWriter, r *http.Request) {
 			http.StatusBadRequest)
 		return
 	}
-
-	// TODO: return bad request response if addr host is proxy server
 
 	req, err := http.NewRequest(r.Method, addr, r.Body)
 	if err != nil {
