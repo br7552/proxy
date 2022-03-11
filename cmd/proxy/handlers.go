@@ -13,6 +13,7 @@ import (
 
 func (p *proxy) proxyHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("proxyHandler")
+	log.Printf("host: %s, url host: %s\n", r.Host, r.URL.Host)
 
 	addr := getDestination(r)
 	if _, err := url.ParseRequestURI(addr); err != nil {
@@ -92,15 +93,16 @@ func (p *proxy) noCacheHandler(w http.ResponseWriter, r *http.Request) {
 
 func getDestination(r *http.Request) string {
 	path := router.Param(r, "path")
-
-	var addr string
-	switch {
-	case r.Host != r.URL.Host:
-		addr = "http://" + r.Host + "/" + path
-	default:
-		addr = "http://" + path
-	}
-
+	addr := "http://" + path
+	/*
+		var addr string
+		switch {
+		case r.Host != r.URL.Host:
+			addr = "http://" + r.Host + "/" + path
+		default:
+			addr = "http://" + path
+		}
+	*/
 	return addr
 }
 
