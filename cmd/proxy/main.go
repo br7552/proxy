@@ -31,5 +31,7 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 	}
 
+	log.Println("starting server")
+
 	log.Fatal(srv.ListenAndServe())
 }
