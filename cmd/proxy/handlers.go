@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -11,6 +12,8 @@ import (
 )
 
 func (p *proxy) proxyHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("proxyHandler")
+
 	addr := getDestination(r)
 	if _, err := url.ParseRequestURI(addr); err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest),
@@ -31,6 +34,8 @@ func (p *proxy) proxyHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+
+	log.Printf("request made: %s\n", addr)
 
 	resp, err := p.client.Do(req)
 	if err != nil {
