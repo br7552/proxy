@@ -4,16 +4,18 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/br7552/proxy/internal/cache"
 )
 
 type proxy struct {
 	client http.Client
-	cache  *RequestCache
+	cache  *cache.RequestCache
 }
 
 func main() {
 	p := &proxy{
-		cache: NewRequestCache(),
+		cache: cache.New(),
 	}
 
 	srv := &http.Server{

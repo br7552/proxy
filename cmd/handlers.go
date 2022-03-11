@@ -2,13 +2,19 @@ package main
 
 import (
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 )
 
 func (p *proxy) handler(w http.ResponseWriter, r *http.Request) {
-	addr := "http://" + r.Host + r.URL.Path
+	var addr string
+	switch {
+	case r.Host != r.URL.Host:
+		addr = "http://" + r.Host + r.URL.Path
+	default:
+		addr = "http://" + r.URL.Path[1:]
+	}
+
 	if _, err := url.ParseRequestURI(addr); err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest),
 			http.StatusBadRequest)
@@ -17,28 +23,26 @@ func (p *proxy) handler(w http.ResponseWriter, r *http.Request) {
 
 	req, err := http.NewRequest(r.Method, addr, r.Body)
 	if err != nil {
-		log.Printf("proxy:%v\n", err)
-		http.Error(w,
-			http.StatusText(http.StatusInternalServerError),
-			http.StatusInternalServerError)
+		serverErrorResponse(w, r, err)
 		return
 	}
 
-	resp, ok := p.cache.Get(req)
-	if !ok {
-		resp, err = p.client.Do(req)
-		if err != nil {
-			log.Printf("proxy:%v\n", err)
-			http.Error(w,
-				http.StatusText(http.StatusInternalServerError),
-				http.StatusInternalServerError)
-			return
-		}
+	// TODO: get maxAge from r cc header
+	if resp, ok := p.cache.Get(req, 5); ok {
+		writeResponse(w, resp)
+		return
+	}
 
-		if req.Method == http.MethodGet ||
-			req.Method == http.MethodHead {
-			p.cache.Set(req, resp)
-		}
+	resp, err := p.client.Do(req)
+	if err != nil {
+		serverErrorResponse(w, r, err)
+		return
+	}
+
+	// TODO: don't cache if no-store is in r cc header
+	if req.Method == http.MethodGet ||
+		req.Method == http.MethodHead {
+		p.cache.Set(req, resp)
 	}
 
 	writeResponse(w, resp)
