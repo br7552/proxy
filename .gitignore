@@ -3,6 +3,7 @@
 
 # Terraform stuff
 .terraform*
+*.tf
 *.tfstate
 *.tfstate.*
 secret.tfvars
