@@ -21,7 +21,7 @@ resource "digitalocean_app" "proxy" {
       instance_size_slug = "basic-xxs"
 
       git {
-        branch         = "main"
+        branch         = "digitalocean"
         repo_clone_url = "https://github.com/br7552/proxy"
       }
     }
