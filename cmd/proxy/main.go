@@ -32,6 +32,5 @@ func main() {
 	}
 
 	log.Println("starting server")
-
 	log.Fatal(srv.ListenAndServe())
 }
