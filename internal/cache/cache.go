@@ -12,8 +12,9 @@ type cacheKey struct {
 }
 
 type cacheItem struct {
-	resp  *http.Response
-	added time.Time
+	resp   *http.Response
+	maxAge int
+	added  time.Time
 }
 
 type RequestCache struct {
@@ -27,12 +28,8 @@ func New() *RequestCache {
 	}
 }
 
-func (rc *RequestCache) Get(req *http.Request, maxAge int) (*http.Response,
+func (rc *RequestCache) Get(req *http.Request) (*http.Response,
 	bool) {
-
-	if maxAge == 0 {
-		return nil, false
-	}
 
 	key := cacheKey{
 		url:    req.URL.String(),
@@ -48,22 +45,30 @@ func (rc *RequestCache) Get(req *http.Request, maxAge int) (*http.Response,
 	}
 
 	age := int(time.Since(item.added).Seconds())
-	if maxAge > 0 && maxAge < age {
+	if item.maxAge > 0 && item.maxAge < age {
+		delete(rc.responses, key)
 		return nil, false
 	}
 
 	return item.resp, true
 }
 
-func (rc *RequestCache) Set(req *http.Request, resp *http.Response) {
+func (rc *RequestCache) Set(req *http.Request, resp *http.Response,
+	maxAge int) {
+
+	if maxAge == 0 {
+		return
+	}
+
 	key := cacheKey{
 		url:    req.URL.String(),
 		method: req.Method,
 	}
 
 	item := cacheItem{
-		resp:  resp,
-		added: time.Now(),
+		resp:   resp,
+		added:  time.Now(),
+		maxAge: maxAge,
 	}
 
 	rc.mu.Lock()
