@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -37,6 +39,10 @@ func (p *proxy) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	for k, v := range r.Header {
+		req.Header[k] = v
+	}
+
 	ccHeaders := make(map[string]string)
 	cc := strings.Split(r.Header.Get("Cache-Control"), ",")
 	for _, v := range cc {
@@ -57,8 +63,12 @@ func (p *proxy) handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if body, ok := p.cache.Get(req, maxAge); ok {
-		w.Write(body)
+	if resp, ok := p.cache.Get(req, maxAge); ok {
+		fmt.Println("CACHE HIT")
+		err = writeResponse(w, resp)
+		if err != nil {
+			serverErrorResponse(w, r, err)
+		}
 		return
 	}
 
@@ -68,18 +78,32 @@ func (p *proxy) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		serverErrorResponse(w, r, err)
-		return
-	}
-
 	if _, ok := ccHeaders["no-store"]; !ok &&
 		(req.Method == http.MethodGet || req.Method == http.MethodHead) {
 
-		p.cache.Set(req, body)
+		p.cache.Set(req, resp)
 	}
 
+	err = writeResponse(w, resp)
+	if err != nil {
+		serverErrorResponse(w, r, err)
+	}
+}
+
+func writeResponse(w http.ResponseWriter, resp *http.Response) error {
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	resp.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+
+	for k, v := range resp.Header {
+		w.Header()[k] = v
+	}
+
+	w.WriteHeader(resp.StatusCode)
 	w.Write(body)
+
+	return nil
 }
