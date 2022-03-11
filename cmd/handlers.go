@@ -1,9 +1,11 @@
 package main
 
 import (
-	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 )
 
 func (p *proxy) handler(w http.ResponseWriter, r *http.Request) {
@@ -21,15 +23,36 @@ func (p *proxy) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: return bad request response if addr host is proxy server
+
 	req, err := http.NewRequest(r.Method, addr, r.Body)
 	if err != nil {
 		serverErrorResponse(w, r, err)
 		return
 	}
 
-	// TODO: get maxAge from r cc header
-	if resp, ok := p.cache.Get(req, 5); ok {
-		writeResponse(w, resp)
+	ccHeaders := make(map[string]string)
+	cc := strings.Split(r.Header.Get("Cache-Control"), ",")
+	for _, v := range cc {
+		v := strings.TrimSpace(v)
+		t := strings.Split(v, "=")
+		switch len(t) {
+		case 2:
+			ccHeaders[t[0]] = t[1]
+		case 1:
+			ccHeaders[t[0]] = ""
+		}
+	}
+
+	maxAge := -1
+	if t, ok := ccHeaders["max-age"]; ok {
+		if age, err := strconv.Atoi(t); nil == err {
+			maxAge = age
+		}
+	}
+
+	if body, ok := p.cache.Get(req, maxAge); ok {
+		w.Write(body)
 		return
 	}
 
@@ -39,21 +62,18 @@ func (p *proxy) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: don't cache if no-store is in r cc header
-	if req.Method == http.MethodGet ||
-		req.Method == http.MethodHead {
-		p.cache.Set(req, resp)
-	}
-
-	writeResponse(w, resp)
-}
-
-func writeResponse(w http.ResponseWriter, resp *http.Response) {
-	for k, v := range resp.Header {
-		w.Header()[k] = v
-	}
-	w.WriteHeader(resp.StatusCode)
-
 	defer resp.Body.Close()
-	io.Copy(w, resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		serverErrorResponse(w, r, err)
+		return
+	}
+
+	if _, ok := ccHeaders["no-store"]; !ok &&
+		(req.Method == http.MethodGet || req.Method == http.MethodHead) {
+
+		p.cache.Set(req, body)
+	}
+
+	w.Write(body)
 }
