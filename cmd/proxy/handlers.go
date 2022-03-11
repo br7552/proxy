@@ -94,15 +94,6 @@ func (p *proxy) noCacheHandler(w http.ResponseWriter, r *http.Request) {
 func getDestination(r *http.Request) string {
 	path := router.Param(r, "path")
 	addr := "http://" + path
-	/*
-		var addr string
-		switch {
-		case r.Host != r.URL.Host:
-			addr = "http://" + r.Host + "/" + path
-		default:
-			addr = "http://" + path
-		}
-	*/
 	return addr
 }
 
